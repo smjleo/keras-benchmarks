@@ -1,5 +1,9 @@
 import keras
 import keras_nlp
+import tf2onnx
+import pdb
+import os
+import subprocess
 
 import benchmark
 from benchmark import keras_utils
@@ -23,7 +27,19 @@ def run(batch_size=benchmark.BERT_FIT_BATCH_SIZE):
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         optimizer=keras.optimizers.AdamW(),
         jit_compile=keras_utils.use_jit(),
-    )
+    )   
+
+    if not os.path.exists("bert"):
+        os.mkdir("bert")
+
+    model.export("bert")
+
+    proc = subprocess.run('python -m tf2onnx.convert --saved-model bert '
+                      '--output bert-keras.onnx'.split(),
+                      capture_output=True)
+    print(proc.returncode)
+    print(proc.stdout.decode('ascii'))
+    print(proc.stderr.decode('ascii'))
 
     return keras_utils.fit(model, dataset)
 
