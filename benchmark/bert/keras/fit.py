@@ -35,7 +35,7 @@ def run(batch_size=benchmark.BERT_FIT_BATCH_SIZE):
     model.export("bert")
 
     proc = subprocess.run('python -m tf2onnx.convert --saved-model bert '
-                      '--output bert-keras.onnx'.split(),
+                      '--output bert-keras.onnx --opset 10'.split(),
                       capture_output=True)
     print(proc.returncode)
     print(proc.stdout.decode('ascii'))
