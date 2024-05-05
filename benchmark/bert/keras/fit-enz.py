@@ -2,6 +2,7 @@ import onnx
 from jaxonnxruntime import backend as jax_backend
 import jax
 import numpy as np
+import functools
  
 def load_and_inspect_model(model_path):
     # Load the ONNX model
@@ -18,14 +19,13 @@ def create_dummy_inputs(input_names, batch_size=16, seq_length=64, hidden_dims=1
     return inputs
  
 # Use the function to load and inspect the model
-model_path = "./bert-optimized.onnx"
+model_path = "./bert-opt.onnx"
 model, input_names, output_names = load_and_inspect_model(model_path)
  
-def run_model(inputs):
-    backend_rep = jax_backend.BackendRep(model)
-    primary_input = {key: val for key, val in inputs.items() if key == 'data'}
-    outputs = backend_rep.run(primary_input)
-    return outputs
+backend_rep = jax_backend.BackendRep(model)
+
+def run_model(primary_input):
+    return backend_rep.run(primary_input)
  
 from enzyme_ad.jax import enzyme_jax_ir, NewXLAPipeline, OldXLAPipeline, JaXPipeline
  
@@ -188,10 +188,13 @@ transform-interpreter,
 enzyme-hlo-remove-transform
 )""")
  
-f = jax.jit(enzyme_jax_ir(pipeline_options=pipeline, jit_options={"donate_argnums":0})(run_model))
  
 # Create dummy inputs based on the input names from the model
 inputs = create_dummy_inputs(["data"])
 print(inputs)
-output = f(inputs)
+
+primary_input = {key: val for key, val in inputs.items() if key == 'data'}
+f = enzyme_jax_ir(pipeline_options=pipeline, jit_options={"donate_argnums":0})(run_model)
+
+output = f(primary_input)
 print("Model output:", output)
